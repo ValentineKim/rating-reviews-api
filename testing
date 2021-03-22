@@ -1,0 +1,51 @@
+--Photos
+WITH photos AS  (
+  SELECT review_id, json_build_object('id',photos_id, 'url',url) AS photo
+  FROM reviewsPhotos
+  INNER JOIN reviews
+  ON reviewsPhotos.review_id = reviews.reviews_id
+  WHERE product_id = 2
+  GROUP BY reviews.reviews_id, reviewsPhotos.photos_id
+)
+
+
+--recommend
+EXPLAIN ANALYZE
+WITH recommended AS (
+  SELECT COUNT(recommend) filter(where recommend = True) as Tr, COUNT(recommend) filter(where recommend = False) AS fal
+  FROM reviews
+  WHERE product_id = 2
+  GROUP BY product_id
+  )
+  SELECT json_build_object('0', Tr, '1', fal)
+  FROM recommended
+
+--ratings
+EXPLAIN ANALYZE
+WITH reviewRatings AS (
+	SELECT rating, COUNT(rating)
+	FROM reviews
+	WHERE product_id = 12
+	GROUP BY rating
+	ORDER BY rating ASC
+	)
+SELECT json_object_agg(rating, count) AS reviewRatings
+FROM reviewRatings;
+
+--Characteristics
+EXPLAIN ANALYZE
+WITH characterisitics AS  (
+  SELECT characteristics.char_name, characteristics.char_id, AVG(reviews_char_value)
+  FROM characteristics
+  INNER JOIN reviewschar
+  ON characteristics.char_id = reviewschar.characteristic_id
+  INNER JOIN reviews
+  ON reviewsChar.review_id = reviews.reviews_id
+  WHERE characteristics.product_id=4
+  GROUP BY characteristics.char_name, characteristics.char_id
+)
+
+
+
+--Updates the added column with a the correct object format
+UPDATE reviews SET photos = json_agg FROM (SELECT reviewsPhotos.review_id, json_agg(json_build_object('id', reviewsPhotos.photos_id, 'url', reviewsPhotos.url)) FROM reviewsphotos GROUP BY reviewsphotos.review_id) AS json_agg WHERE json_agg.review_id = reviews.reviews_id
